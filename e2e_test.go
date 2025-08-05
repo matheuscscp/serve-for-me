@@ -185,8 +185,6 @@ func TestEndToEnd(t *testing.T) {
 				t.Fatal("server did not stop after context cancellation")
 			case <-stopped:
 			}
-
-			time.Sleep(120 * time.Millisecond)
 		})
 	}
 }

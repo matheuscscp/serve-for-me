@@ -12,6 +12,8 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
+
+	"github.com/matheuscscp/serve-for-me/api"
 )
 
 // ClientOption defines a function that can modify the client options.
@@ -60,7 +62,7 @@ func ServeForMe(ctx context.Context, serverURL string,
 	// Dial.
 	conn, _, err := websocket.Dial(ctx, serverURL, &websocket.DialOptions{
 		HTTPClient: o.httpClient,
-		HTTPHeader: http.Header{HeaderServe: []string{idToken}},
+		HTTPHeader: http.Header{api.HeaderServe: []string{idToken}},
 	})
 	if err != nil {
 		return err
@@ -86,7 +88,7 @@ func ServeForMe(ctx context.Context, serverURL string,
 	close(started)
 
 	for {
-		var jsonReq Request
+		var jsonReq api.Request
 		if err := wsjson.Read(ctx, conn, &jsonReq); err != nil {
 			if ctx.Err() != nil {
 				return nil
@@ -147,7 +149,7 @@ func ServeForMe(ctx context.Context, serverURL string,
 		if len(body) == 0 {
 			body = nil
 		}
-		resp := &Response{
+		resp := &api.Response{
 			StatusCode: res.StatusCode,
 			Header:     header,
 			Body:       body,

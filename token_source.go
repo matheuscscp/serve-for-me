@@ -9,6 +9,8 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/idtoken"
+
+	"github.com/matheuscscp/serve-for-me/api"
 )
 
 // TokenSource is an interface that defines a method to get an ID token.
@@ -49,7 +51,7 @@ type GitHubActions struct{}
 
 // Get implements TokenSource.
 func (GitHubActions) Get(ctx context.Context) (string, error) {
-	return githubactions.GetIDToken(ctx, ClientID)
+	return githubactions.GetIDToken(ctx, api.ClientID)
 }
 
 // GoogleIDToken is a TokenSource that retrieves Google ID tokens.
@@ -75,7 +77,7 @@ func (GoogleIDToken) Get(ctx context.Context) (string, error) {
 	}
 
 	// Try machine user ID token (GCP Service Account).
-	ts, err := idtoken.NewTokenSource(ctx, ClientID)
+	ts, err := idtoken.NewTokenSource(ctx, api.ClientID)
 	if err != nil {
 		return "", fmt.Errorf("failed to create GCP service account token source: %w", err)
 	}
