@@ -10,6 +10,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 
+	"github.com/matheuscscp/serve-for-me/api"
 	"github.com/matheuscscp/serve-for-me/internal/logging"
 )
 
@@ -104,7 +105,9 @@ func (b *backend) sendToGoroutine(w http.ResponseWriter, r *http.Request, job *r
 	}
 }
 
-func callBackend(done <-chan struct{}, conn *websocket.Conn, job *request) (resp *http.Response, err error) {
+func callBackend(done <-chan struct{}, conn *websocket.Conn,
+	connReader <-chan *api.Response, job *request) (resp *http.Response, err error) {
+
 	defer func() {
 		if err == nil {
 			job.resp <- resp
@@ -112,12 +115,12 @@ func callBackend(done <-chan struct{}, conn *websocket.Conn, job *request) (resp
 		close(job.resp)
 	}()
 
+	// Build request.
 	body, err := io.ReadAll(job.req.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
-
-	jsonReq := &Request{
+	jsonReq := &api.Request{
 		Proto:         job.req.Proto,
 		ProtoMajor:    job.req.ProtoMajor,
 		ProtoMinor:    job.req.ProtoMinor,
@@ -128,11 +131,9 @@ func callBackend(done <-chan struct{}, conn *websocket.Conn, job *request) (resp
 		RemoteAddr:    job.req.RemoteAddr,
 		ContentLength: job.req.ContentLength,
 	}
-
 	if len(job.req.Header) > 0 {
 		jsonReq.Header = job.req.Header
 	}
-
 	if len(body) > 0 {
 		jsonReq.Body = body
 	}
@@ -148,15 +149,24 @@ func callBackend(done <-chan struct{}, conn *websocket.Conn, job *request) (resp
 		}
 	}()
 
+	// Send request to the backend.
 	if err := wsjson.Write(ctx, conn, jsonReq); err != nil {
 		return nil, fmt.Errorf("failed to write request to backend: %w", err)
 	}
 
-	var jsonResp Response
-	if err := wsjson.Read(ctx, conn, &jsonResp); err != nil {
-		return nil, fmt.Errorf("failed to read response from backend: %w", err)
+	// Wait for the response.
+	var jsonResp *api.Response
+	var ok bool
+	select {
+	case <-ctx.Done():
+		return nil, fmt.Errorf("context done before receiving response: %w", ctx.Err())
+	case jsonResp, ok = <-connReader:
+		if !ok {
+			return nil, fmt.Errorf("backend connection closed before response was received")
+		}
 	}
 
+	// Send back to the client.
 	resp = &http.Response{
 		StatusCode: jsonResp.StatusCode,
 		Header:     jsonResp.Header,

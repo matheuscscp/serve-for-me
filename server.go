@@ -1,6 +1,7 @@
 package serveforme
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -11,7 +12,9 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 
+	"github.com/matheuscscp/serve-for-me/api"
 	"github.com/matheuscscp/serve-for-me/internal/logging"
+	"github.com/matheuscscp/serve-for-me/internal/reader"
 )
 
 // ServerOption defines a function that can modify the server options.
@@ -59,7 +62,7 @@ func NewServer(allowedIdentities []Identity, opts ...ServerOption) (*Server, err
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get(HeaderServe) != "" {
+	if r.Header.Get(api.HeaderServe) != "" {
 		s.serveForMe(w, r)
 		return
 	}
@@ -84,7 +87,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) serveForMe(w http.ResponseWriter, r *http.Request) {
-	l := logging.FromContext(r.Context()).WithField("handler", HeaderServe)
+	l := logging.FromContext(r.Context()).WithField("handler", api.HeaderServe)
 
 	// Authenticate the request.
 	id, err := s.authenticate(r)
@@ -139,41 +142,35 @@ func (s *Server) serveForMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle incoming requests.
-	const pingInterval = 100 * time.Millisecond
+	ctx, cancel := context.WithCancel(r.Context())
+	connReader, connDone := reader.ReadJSON[api.Response](ctx, conn)
+	defer func() {
+		cancel()
+		select {
+		case <-connDone:
+		case <-time.After(5 * time.Second):
+			l.Warn("timeout waiting for connection reader to finish")
+		}
+	}()
 	l.Info("handling requests")
-	ctx := r.Context()
-	done := ctx.Done()
-	pingTimer := time.NewTimer(pingInterval)
 	for {
 		select {
-		case <-done:
-			conn.Close(websocket.StatusGoingAway, "backend context done")
+		case <-ctx.Done():
+			conn.Close(websocket.StatusGoingAway, "backend handshake request context done")
 			return
-		case <-pingTimer.C:
-			// Instead of a periodic ping, ideally we would have an event to select on
-			// that would tell when the client closed the connection.
-			// xref: https://github.com/coder/websocket/issues/533
-			if err := wsjson.Write(ctx, conn, struct{}{}); err != nil {
-				l.WithError(err).Error("failed to send ping")
-				return
-			}
-			if err := wsjson.Read(ctx, conn, &struct{}{}); err != nil {
-				l.WithError(err).Error("failed to read pong")
-				return
-			}
+		case <-connDone:
+			return
 		case job := <-backendChannel:
 			l := l.WithField("request", map[string]any{
 				"method": job.req.Method,
 				"host":   job.req.Host,
 				"path":   job.req.URL.Path,
 			})
-			if _, err := callBackend(done, conn, job); err != nil {
+			if _, err := callBackend(ctx.Done(), conn, connReader, job); err != nil {
 				l.WithError(err).Error("failed to call backend")
 				return
 			}
 		}
-		pingTimer.Stop()
-		pingTimer.Reset(pingInterval)
 	}
 }
 
@@ -197,7 +194,7 @@ func (s *Server) deleteBackend(backendID string) {
 }
 
 func (s *Server) authenticate(r *http.Request) (*Identity, error) {
-	idToken := r.Header.Get(HeaderServe)
+	idToken := r.Header.Get(api.HeaderServe)
 	ts := staticTokenSource(idToken)
 	id, err := NewIdentityFromTokenSource(r.Context(), ts)
 	if err != nil {

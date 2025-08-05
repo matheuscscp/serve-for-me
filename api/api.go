@@ -1,4 +1,4 @@
-package serveforme
+package api
 
 import "net/http"
 
