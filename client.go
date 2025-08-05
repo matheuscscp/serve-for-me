@@ -3,14 +3,12 @@ package serveforme
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -18,13 +16,6 @@ import (
 
 // ClientOption defines a function that can modify the client options.
 type ClientOption func(*clientOptions)
-
-// WithIDToken sets the ID token for the client.
-func WithIDToken(idToken string) ClientOption {
-	return func(o *clientOptions) {
-		o.idToken = idToken
-	}
-}
 
 // WithHTTPClient sets the HTTP client for the client.
 func WithHTTPClient(httpClient *http.Client) ClientOption {
@@ -34,8 +25,8 @@ func WithHTTPClient(httpClient *http.Client) ClientOption {
 }
 
 type clientOptions struct {
-	idToken    string
-	httpClient *http.Client
+	tokenSource TokenSource
+	httpClient  *http.Client
 }
 
 // ServeForMe starts a websocket with the server and handles requests
@@ -49,8 +40,13 @@ func ServeForMe(ctx context.Context, serverURL string,
 		opt(&o)
 	}
 
-	if err := o.ensureIDToken(ctx); err != nil {
-		return fmt.Errorf("failed to retrieve ID token: %w", err)
+	// Fetch ID token.
+	if o.tokenSource == nil {
+		return errors.New("no token source configured")
+	}
+	idToken, err := o.tokenSource.Get(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get ID token: %w", err)
 	}
 
 	// Build handler patterns and ServeMux.
@@ -64,7 +60,7 @@ func ServeForMe(ctx context.Context, serverURL string,
 	// Dial.
 	conn, _, err := websocket.Dial(ctx, serverURL, &websocket.DialOptions{
 		HTTPClient: o.httpClient,
-		HTTPHeader: http.Header{HeaderServe: []string{o.idToken}},
+		HTTPHeader: http.Header{HeaderServe: []string{idToken}},
 	})
 	if err != nil {
 		return err
@@ -164,55 +160,4 @@ func ServeForMe(ctx context.Context, serverURL string,
 			return fmt.Errorf("failed to write response to websocket: %w", err)
 		}
 	}
-}
-
-func (o *clientOptions) ensureIDToken(ctx context.Context) error {
-	switch {
-	case o.idToken != "":
-		return nil
-	case os.Getenv("GITHUB_ACTIONS") == "true":
-		return o.fetchGitHubActionOIDCToken(ctx)
-	default:
-		return errors.New("no ID token source is present in environment")
-	}
-}
-
-func (o *clientOptions) fetchGitHubActionOIDCToken(ctx context.Context) error {
-	endpoint := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
-	if endpoint == "" {
-		return errors.New("ACTIONS_ID_TOKEN_REQUEST_URL is not set (did you enable id-token: write?)")
-	}
-	endpoint = fmt.Sprintf("%s&audience=%s", endpoint, url.QueryEscape(ClientID))
-
-	bearer := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
-	if bearer == "" {
-		return errors.New("ACTIONS_ID_TOKEN_REQUEST_TOKEN is not set")
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+bearer)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("requesting OIDC token: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("OIDC endpoint returned %s", resp.Status)
-	}
-
-	var payload struct {
-		Value string `json:"value"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return fmt.Errorf("decoding JSON: %w", err)
-	}
-
-	o.idToken = payload.Value
-
-	return nil
 }

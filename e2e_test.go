@@ -19,6 +19,7 @@ import (
 	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/lestrrat-go/jwx/v2/jwt"
 	. "github.com/onsi/gomega"
+	"golang.org/x/oauth2/google"
 
 	serveforme "github.com/matheuscscp/serve-for-me"
 )
@@ -84,9 +85,16 @@ func TestEndToEnd(t *testing.T) {
 			opts: []serveforme.ClientOption{serveforme.WithIDToken(idToken)},
 		},
 	}
-	if testGitHubActionsRepo() != "" {
+	if hasGitHubActions() {
 		testCases = append(testCases, testCase{
 			name: "GitHub Actions token",
+			opts: []serveforme.ClientOption{serveforme.WithGitHubActions()},
+		})
+	}
+	if hasGoogleIDToken() {
+		testCases = append(testCases, testCase{
+			name: "Google ID token",
+			opts: []serveforme.ClientOption{serveforme.WithGoogleIDToken()},
 		})
 	}
 
@@ -226,12 +234,15 @@ func newOIDCServer(g *WithT) (*httptest.Server, []serveforme.Identity, string, s
 		ClientID: aud,
 		Subject:  sub,
 	}}
-	if repo := testGitHubActionsRepo(); repo != "" {
-		allowedIdentities = append(allowedIdentities, serveforme.Identity{
-			Issuer:   "https://token.actions.githubusercontent.com",
-			ClientID: serveforme.ClientID,
-			Subject:  fmt.Sprintf("repo:%s:pull_request", repo),
-		})
+	if hasGitHubActions() {
+		id, err := serveforme.NewIdentityFromTokenSource(context.Background(), serveforme.GitHubActions{})
+		g.Expect(err).NotTo(HaveOccurred())
+		allowedIdentities = append(allowedIdentities, *id)
+	}
+	if hasGoogleIDToken() {
+		id, err := serveforme.NewIdentityFromTokenSource(context.Background(), serveforme.GoogleIDToken{})
+		g.Expect(err).NotTo(HaveOccurred())
+		allowedIdentities = append(allowedIdentities, *id)
 	}
 
 	now := time.Now()
@@ -274,6 +285,11 @@ func newOIDCServer(g *WithT) (*httptest.Server, []serveforme.Identity, string, s
 	return s, allowedIdentities, string(idToken), string(expiredToken)
 }
 
-func testGitHubActionsRepo() string {
-	return os.Getenv("TEST_GITHUB_ACTIONS_REPO")
+func hasGitHubActions() bool {
+	return os.Getenv("GITHUB_ACTIONS") == "true"
+}
+
+func hasGoogleIDToken() bool {
+	creds, err := google.FindDefaultCredentials(context.Background())
+	return err == nil && creds != nil
 }

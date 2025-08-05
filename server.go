@@ -3,14 +3,12 @@ package serveforme
 import (
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/coreos/go-oidc/v3/oidc"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
 	"github.com/matheuscscp/serve-for-me/internal/logging"
@@ -200,7 +198,8 @@ func (s *Server) deleteBackend(backendID string) {
 
 func (s *Server) authenticate(r *http.Request) (*Identity, error) {
 	idToken := r.Header.Get(HeaderServe)
-	id, err := parseIDToken(idToken)
+	ts := staticTokenSource(idToken)
+	id, err := NewIdentityFromTokenSource(r.Context(), ts)
 	if err != nil {
 		return nil, err
 	}
@@ -215,32 +214,4 @@ func (s *Server) authenticate(r *http.Request) (*Identity, error) {
 		return nil, err
 	}
 	return id, nil
-}
-
-func parseIDToken(idToken string) (*Identity, error) {
-	tok, _, err := jwt.NewParser().ParseUnverified(idToken, jwt.MapClaims{})
-	if err != nil {
-		return nil, err
-	}
-	issuer, err := tok.Claims.GetIssuer()
-	if err != nil {
-		return nil, err
-	}
-	audiences, err := tok.Claims.GetAudience()
-	if err != nil {
-		return nil, err
-	}
-	if len(audiences) != 1 {
-		return nil, fmt.Errorf("exactly one audience is expected, got [%s]", strings.Join(audiences, ", "))
-	}
-	clientID := audiences[0]
-	subject, err := tok.Claims.GetSubject()
-	if err != nil {
-		return nil, err
-	}
-	return &Identity{
-		Issuer:   issuer,
-		ClientID: clientID,
-		Subject:  subject,
-	}, nil
 }
