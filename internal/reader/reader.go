@@ -23,7 +23,7 @@ const (
 // The first channel returns the unmarshaled objects, and is closed
 // when the connection is closed or an error occurs.
 // The second channel is closed at the same time as the first one,
-// and can be used to detect when the goroutine has finished reading.
+// and can be used to detect when the goroutine has finished.
 func ReadJSON[T any](ctx context.Context, c *websocket.Conn) (<-chan *T, <-chan struct{}) {
 	ch := make(chan *T)
 	done := make(chan struct{})

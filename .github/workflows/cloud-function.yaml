@@ -1,0 +1,36 @@
+name: cloud-function
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  cloud-function:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: google-github-actions/setup-gcloud@6a7c903a70c8625ed6700fa299f5ddb4ca6022e9 # v2.1.5
+      - uses: google-github-actions/auth@b7593ed2efd1c1617e1b0254da33b86225adb2a5 # v2.1.12
+        with:
+          project_id: serve-for-me
+          workload_identity_provider: projects/703065148941/locations/global/workloadIdentityPools/github-actions/providers/github-actions
+      - name: Deploy Cloud Function
+        working-directory: .github/workflows/cloudfunction
+        run: |
+          gcloud functions deploy serve-for-me \
+            --gen2 \
+            --runtime=go124 \
+            --region=europe-west2 \
+            --source=. \
+            --entry-point=ServeForMe \
+            --trigger-http \
+            --max-instances=1 \
+            --concurrency=10 \
+            --memory=128Mi \
+            --cpu=1000m \
+            --timeout=5m \
+            --allow-unauthenticated
