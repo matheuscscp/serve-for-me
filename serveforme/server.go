@@ -12,9 +12,9 @@ import (
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/google/uuid"
 
-	"github.com/matheuscscp/serve-for-me/api"
-	"github.com/matheuscscp/serve-for-me/internal/logging"
-	"github.com/matheuscscp/serve-for-me/internal/reader"
+	"github.com/matheuscscp/serve-for-me/serveforme/api"
+	"github.com/matheuscscp/serve-for-me/serveforme/internal/logging"
+	"github.com/matheuscscp/serve-for-me/serveforme/internal/reader"
 )
 
 // ServerOption defines a function that can modify the server options.

@@ -1,4 +1,4 @@
-module github.com/matheuscscp/serve-for-me
+module github.com/matheuscscp/serve-for-me/serveforme
 
 go 1.24.0
 

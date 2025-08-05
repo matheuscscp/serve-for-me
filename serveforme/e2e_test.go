@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"golang.org/x/oauth2/google"
 
-	serveforme "github.com/matheuscscp/serve-for-me"
+	"github.com/matheuscscp/serve-for-me/serveforme"
 )
 
 func TestEndToEnd(t *testing.T) {

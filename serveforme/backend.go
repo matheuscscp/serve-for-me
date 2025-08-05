@@ -10,8 +10,8 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 
-	"github.com/matheuscscp/serve-for-me/api"
-	"github.com/matheuscscp/serve-for-me/internal/logging"
+	"github.com/matheuscscp/serve-for-me/serveforme/api"
+	"github.com/matheuscscp/serve-for-me/serveforme/internal/logging"
 )
 
 const (

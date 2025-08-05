@@ -2,11 +2,11 @@ module github.com/matheuscscp/serve-for-me/cloudfunction
 
 go 1.24.0
 
-replace github.com/matheuscscp/serve-for-me => ./serveforme
+replace github.com/matheuscscp/serve-for-me/serveforme => ./serveforme
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
-	github.com/matheuscscp/serve-for-me v0.2.0
+	github.com/matheuscscp/serve-for-me/serveforme v0.3.0
 )
 
 require (
