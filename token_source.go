@@ -3,12 +3,9 @@ package serveforme
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
-	"net/url"
-	"os"
 
+	"github.com/sethvargo/go-githubactions"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/idtoken"
@@ -52,41 +49,7 @@ type GitHubActions struct{}
 
 // Get implements TokenSource.
 func (GitHubActions) Get(ctx context.Context) (string, error) {
-	endpoint := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
-	if endpoint == "" {
-		return "", errors.New("ACTIONS_ID_TOKEN_REQUEST_URL is not set (did you enable id-token: write?)")
-	}
-	endpoint = fmt.Sprintf("%s&audience=%s", endpoint, url.QueryEscape(ClientID))
-
-	bearer := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
-	if bearer == "" {
-		return "", errors.New("ACTIONS_ID_TOKEN_REQUEST_TOKEN is not set")
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Authorization", "Bearer "+bearer)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to request OIDC token: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("OIDC endpoint returned %s", resp.Status)
-	}
-
-	var payload struct {
-		Value string `json:"value"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return "", fmt.Errorf("decoding JSON: %w", err)
-	}
-
-	return payload.Value, nil
+	return githubactions.GetIDToken(ctx, ClientID)
 }
 
 // GoogleIDToken is a TokenSource that retrieves Google ID tokens.

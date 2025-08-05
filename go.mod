@@ -9,6 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/lestrrat-go/jwx/v2 v2.1.6
 	github.com/onsi/gomega v1.38.0
+	github.com/sethvargo/go-githubactions v1.3.1
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.244.0
