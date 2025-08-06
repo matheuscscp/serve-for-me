@@ -1,9 +1,8 @@
 name: cloud-function
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main]
+    tags: [v*]
 
 jobs:
   cloud-function:

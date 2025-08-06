@@ -35,7 +35,7 @@ func ReadJSON[T any](ctx context.Context, c *websocket.Conn) (<-chan *T, <-chan 
 		for {
 			_, r, err := c.Reader(ctx)
 			if err != nil {
-				logging.FromContext(ctx).WithError(err).Error("error reading from websocket")
+				logging.FromContext(ctx).WithError(err).Debug("error reading from websocket")
 				return
 			}
 

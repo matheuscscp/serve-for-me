@@ -2,6 +2,7 @@ package logging
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -17,6 +18,9 @@ func FromContext(ctx context.Context) logrus.FieldLogger {
 	l.SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: time.RFC3339Nano,
 	})
+	if os.Getenv("DEBUG") != "" {
+		l.SetLevel(logrus.DebugLevel)
+	}
 	return l
 }
 
