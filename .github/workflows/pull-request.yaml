@@ -19,3 +19,4 @@ jobs:
           workload_identity_provider: projects/703065148941/locations/global/workloadIdentityPools/github-actions/providers/github-actions
           service_account: pull-request@serve-for-me.iam.gserviceaccount.com
       - run: go test ./... -v
+        working-directory: serveforme
