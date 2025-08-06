@@ -10,7 +10,7 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/idtoken"
 
-	"github.com/matheuscscp/serve-for-me/api"
+	"github.com/matheuscscp/serve-for-me/serveforme/api"
 )
 
 // TokenSource is an interface that defines a method to get an ID token.

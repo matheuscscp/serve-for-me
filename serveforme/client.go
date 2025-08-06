@@ -13,7 +13,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 
-	"github.com/matheuscscp/serve-for-me/api"
+	"github.com/matheuscscp/serve-for-me/serveforme/api"
 )
 
 // ClientOption defines a function that can modify the client options.

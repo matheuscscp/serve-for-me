@@ -11,7 +11,7 @@ import (
 
 	"github.com/coder/websocket"
 
-	"github.com/matheuscscp/serve-for-me/internal/logging"
+	"github.com/matheuscscp/serve-for-me/serveforme/internal/logging"
 )
 
 const (

@@ -3,7 +3,7 @@ package cloudfunction
 import (
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 
-	serveforme "github.com/matheuscscp/serve-for-me"
+	"github.com/matheuscscp/serve-for-me/serveforme"
 )
 
 func init() {
