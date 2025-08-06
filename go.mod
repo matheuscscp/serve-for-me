@@ -6,7 +6,7 @@ replace github.com/matheuscscp/serve-for-me/serveforme => ./serveforme
 
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
-	github.com/matheuscscp/serve-for-me/serveforme v0.3.0
+	github.com/matheuscscp/serve-for-me/serveforme v0.4.0
 )
 
 require (
